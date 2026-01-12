@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IMDB API</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container mt-4">
+        <h2 class="text-center mb-4">IMDB </h2>
+
+        <!-- Search Bar -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <input type="text" class="form-control" id="searchInput" placeholder="Enter movie name...">
+            </div>
+            <div class="col-md-4">
+                <button class="btn btn-primary me-2" id="searchBtn">Search</button>
+                <button class="btn btn-success" id="showAllBtn">Show All</button>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" style="display: none;">
+            <p>Loading...</p>
+        </div>
+
+        <!-- Error -->
+        <div id="errorDiv" class="alert alert-danger" style="display: none;"></div>
+
+        <!-- Results Table -->
+        <div id="resultsDiv" style="display: none;">
+            <h5 id="resultCount"></h5>
+            <table class="table table-bordered table-striped">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Poster</th>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Type</th>
+                        <th>Year</th>
+                        <th>Genres</th>
+                        <th>Rating</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            var baseUrl = 'https://api.imdbapi.dev';
+
+            // Search button click
+            $('#searchBtn').click(function () {
+                var query = $('#searchInput').val().trim();
+                if (query === '') {
+                    alert('Please enter a movie name');
+                    return;
+                }
+                fetchData('/search/titles?query=' + encodeURIComponent(query));
+            });
+
+            // Enter key
+            $('#searchInput').keypress(function (e) {
+                if (e.which === 13) {
+                    $('#searchBtn').click();
+                }
+            });
+
+            // Show All button click
+            $('#showAllBtn').click(function () {
+                fetchData('/titles');
+            });
+
+            function fetchData(endpoint) {
+                $('#loading').show();
+                $('#resultsDiv').hide();
+                $('#errorDiv').hide();
+
+                $.ajax({
+                    url: baseUrl + endpoint,
+                    method: 'GET',
+                    success: function (data) {
+                        $('#loading').hide();
+                        showResults(data);
+                    },
+                    error: function (xhr) {
+                        $('#loading').hide();
+                        $('#errorDiv').text('Error: ' + (xhr.responseJSON?.message || 'Something went wrong')).show();
+                    }
+                });
+            }
+
+            function showResults(data) {
+                var items = data.results || data.titles || [];
+
+                if (items.length === 0) {
+                    $('#errorDiv').text('No results found').show();
+                    return;
+                }
+
+                $('#resultCount').text('Found ' + items.length + ' results');
+                $('#tableBody').empty();
+
+                items.forEach(function (item) {
+                    var posterUrl = item.primaryImage?.url || '';
+                    var row = '<tr>';
+                    row += '<td>' + (posterUrl ? '<img src="' + posterUrl + '" width="50" height="70" style="object-fit: cover;">' : '-') + '</td>';
+                    row += '<td>' + (item.id || '-') + '</td>';
+                    row += '<td>' + (item.primaryTitle || item.originalTitle || '-') + '</td>';
+                    row += '<td>' + (item.type || '-') + '</td>';
+                    row += '<td>' + (item.startYear || '-') + '</td>';
+                    row += '<td>' + (item.genres ? item.genres.join(', ') : '-') + '</td>';
+                    row += '<td>' + (item.rating?.aggregateRating || '-') + '</td>';
+                    row += '</tr>';
+                    $('#tableBody').append(row);
+                });
+
+                $('#resultsDiv').show();
+            }
+        });
+    </script>
+</body>
+
+</html>
